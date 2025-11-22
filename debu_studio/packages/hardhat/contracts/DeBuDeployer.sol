@@ -49,4 +49,8 @@ contract DeBuDeployer {
     function getDeployedProcessesCount() public view returns (uint256) {
         return deployedProcesses.length;
     }
+
+    function getDeployedProcess(uint256 index) public view returns (address) {
+        return deployedProcesses[index];
+    }
 }
