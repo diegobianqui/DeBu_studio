@@ -46,6 +46,13 @@ const PROCESS_TEMPLATE_ABI = [
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getStepCount",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [{"internalType": "uint256", "name": "index", "type": "uint256"}],
     "name": "getStep",
     "outputs": [
@@ -93,6 +100,16 @@ export const InstanceCard = ({ address }: { address: string }) => {
     functionName: "currentStepIndex",
   });
 
+  // 3.5 Get Step Count
+  const { data: stepCount } = useReadContract({
+    address: templateAddress,
+    abi: PROCESS_TEMPLATE_ABI,
+    functionName: "getStepCount",
+    query: {
+        enabled: !!templateAddress,
+    }
+  });
+
   // 4. Get Current Step Details
   const { data: currentStep } = useReadContract({
     address: templateAddress,
@@ -100,7 +117,7 @@ export const InstanceCard = ({ address }: { address: string }) => {
     functionName: "getStep",
     args: [currentStepIndex || 0n],
     query: {
-        enabled: !!templateAddress && currentStepIndex !== undefined,
+        enabled: !!templateAddress && currentStepIndex !== undefined && stepCount !== undefined && currentStepIndex < stepCount,
     }
   });
 

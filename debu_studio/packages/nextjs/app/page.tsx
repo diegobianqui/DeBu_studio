@@ -26,8 +26,8 @@ const Home: NextPage = () => {
               <p className="mb-4">
                 Create new process blueprints with custom steps and logic.
               </p>
-              <Link href="/studio" className="btn btn-primary btn-sm">
-                Go to Studio
+              <Link href="/design" className="btn btn-primary btn-sm">
+                Go to Design
               </Link>
             </div>
             

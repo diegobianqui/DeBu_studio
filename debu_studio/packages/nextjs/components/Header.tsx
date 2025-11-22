@@ -21,8 +21,8 @@ export const menuLinks: HeaderMenuLink[] = [
     href: "/",
   },
   {
-    label: "Studio",
-    href: "/studio",
+    label: "Design",
+    href: "/design",
     icon: <PencilSquareIcon className="h-4 w-4" />,
   },
   {
