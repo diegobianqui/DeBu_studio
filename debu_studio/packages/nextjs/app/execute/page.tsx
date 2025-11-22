@@ -22,7 +22,7 @@ import { InstanceCard } from "~~/components/debu/InstanceCard";
 //
 // Let's build a component that iterates all templates and collects instances.
 
-const MyProcesses: NextPage = () => {
+const Execute: NextPage = () => {
   const { address } = useAccount();
   const [allInstances, setAllInstances] = useState<string[]>([]);
 
@@ -35,7 +35,7 @@ const MyProcesses: NextPage = () => {
     <div className="flex items-center flex-col flex-grow pt-10">
       <div className="px-5 w-full max-w-4xl">
         <h1 className="text-center mb-8">
-          <span className="block text-4xl font-bold">My Processes</span>
+          <span className="block text-4xl font-bold">Execute Processes</span>
           <span className="block text-2xl mb-2">Manage your running instances</span>
         </h1>
 
@@ -104,4 +104,4 @@ const AddressDisplay = ({ address }: { address?: string }) => {
     return <span className="font-mono text-sm">{address}</span>;
 }
 
-export default MyProcesses;
+export default Execute;
