@@ -31,6 +31,11 @@ export const menuLinks: HeaderMenuLink[] = [
     icon: <RectangleStackIcon className="h-4 w-4" />,
   },
   {
+    label: "My Processes",
+    href: "/my-processes",
+    icon: <Bars3Icon className="h-4 w-4" />,
+  },
+  {
     label: "Debug Contracts",
     href: "/debug",
     icon: <BugAntIcon className="h-4 w-4" />,
