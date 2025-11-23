@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { notification } from "~~/utils/scaffold-eth";
-import { decodeEventLog } from "viem";
 
 const PROCESS_TEMPLATE_ABI = [
 	{
@@ -42,15 +41,6 @@ const PROCESS_TEMPLATE_ABI = [
 		stateMutability: "nonpayable",
 		type: "function",
 	},
-	{
-		anonymous: false,
-		inputs: [
-			{ indexed: true, internalType: "address", name: "instance", type: "address" },
-			{ indexed: true, internalType: "address", name: "creator", type: "address" },
-		],
-		name: "InstanceCreated",
-		type: "event",
-	},
 ] as const;
 
 interface ProcessTableRowProps {
@@ -73,7 +63,6 @@ export const ProcessTableRow = ({
 	onToggleExpand,
 }: ProcessTableRowProps) => {
 	const router = useRouter();
-	const [isRedirecting, setIsRedirecting] = useState(false);
 
 	const { data: name } = useReadContract({
 		address: address as `0x${string}`,
@@ -99,77 +88,51 @@ export const ProcessTableRow = ({
 		functionName: "getStepCount",
 	});
 
-	const { writeContractAsync, isPending, data: txHash } = useWriteContract();
-	const { data: txReceipt, isLoading: isConfirming } = useWaitForTransactionReceipt({
-		hash: txHash as `0x${string}`,
+	const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
+	const { writeContractAsync, isPending } = useWriteContract();
+	
+	const { data: receipt } = useWaitForTransactionReceipt({
+		hash: txHash || undefined,
 	});
-
-	// Watch for successful transaction and extract instance address from logs
-	React.useEffect(() => {
-		if (txReceipt && isRedirecting) {
-			try {
-				// Parse the InstanceCreated event from the receipt logs
-				const instanceCreatedLog = txReceipt.logs.find((log) => {
-					// Check if this log matches our contract's InstanceCreated event
-					try {
-						const decoded = decodeEventLog({
-							abi: PROCESS_TEMPLATE_ABI,
-							data: log.data,
-							topics: log.topics,
-						});
-						return decoded.eventName === "InstanceCreated";
-					} catch {
-						return false;
-					}
-				});
-
-				if (instanceCreatedLog) {
-					try {
-						const decoded = decodeEventLog({
-							abi: PROCESS_TEMPLATE_ABI,
-							data: instanceCreatedLog.data,
-							topics: instanceCreatedLog.topics,
-						}) as any;
-						
-						if (decoded.args?.instance) {
-							const instanceAddress = decoded.args.instance;
-							router.push(`/execute?instance=${instanceAddress}`);
-							setIsRedirecting(false);
-						}
-					} catch (e) {
-						console.error("Error decoding event:", e);
-						// Fallback: redirect to browse
-						router.push("/browse");
-						setIsRedirecting(false);
-					}
-				} else {
-					// No event found, fallback to browse
-					router.push("/browse");
-					setIsRedirecting(false);
-				}
-			} catch (e) {
-				console.error("Error processing transaction receipt:", e);
-				router.push("/browse");
-				setIsRedirecting(false);
-			}
-		}
-	}, [txReceipt, isRedirecting, router]);
 
 	const handleStart = async () => {
 		try {
-			setIsRedirecting(true);
-			await writeContractAsync({
+			const hash = await writeContractAsync({
 				address: address as `0x${string}`,
 				abi: PROCESS_TEMPLATE_ABI,
 				functionName: "instantiate",
 			});
+			setTxHash(hash);
 			notification.success("Process instance created! Redirecting...");
 		} catch (e) {
 			console.error("Error starting process:", e);
 			notification.error("Failed to start process instance");
-			setIsRedirecting(false);
 		}
 	};
+
+	// When transaction completes, extract instance address from logs
+	React.useEffect(() => {
+		if (receipt && receipt.logs && receipt.logs.length > 0) {
+			// The InstanceCreated event is emitted with the instance address
+			// Event signature: event InstanceCreated(address indexed instance, address indexed creator);
+			// We can extract it from the logs
+			try {
+				// The first log should be the InstanceCreated event
+				// The second topic (index 1) contains the instance address (32 bytes, padded)
+				if (receipt.logs[0] && receipt.logs[0].topics && receipt.logs[0].topics[1]) {
+					const instanceAddress = `0x${receipt.logs[0].topics[1].slice(-40)}`;
+					console.log("Created instance:", instanceAddress);
+					setTimeout(() => {
+						router.push(`/execute?instance=${instanceAddress}`);
+					}, 500);
+				}
+			} catch (error) {
+				console.error("Error parsing instance address from receipt:", error);
+				// Fallback: just redirect to execute without instance
+				router.push("/execute");
+			}
+		}
+	}, [receipt, router]);
 
 	// Apply filters
 	if (filterCategory && category !== filterCategory) return null;
@@ -180,7 +143,7 @@ export const ProcessTableRow = ({
 	if (!name || category === undefined) {
 		return (
 			<tr className="border-b border-blue-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-				<td colSpan={6} className="p-3 text-center text-slate-500 dark:text-slate-400">
+				<td colSpan={7} className="p-3 text-center text-slate-500 dark:text-slate-400">
 					<span className="loading loading-spinner loading-sm"></span>
 				</td>
 			</tr>
@@ -192,21 +155,23 @@ export const ProcessTableRow = ({
 	return (
 		<tr className="border-b border-blue-100 dark:border-slate-700 hover:bg-blue-50/50 dark:hover:bg-slate-700/50 transition-colors">
 			<td className="p-4 text-center">
-				<button
-					onClick={() => onToggleExpand?.(address)}
-					className="btn btn-ghost btn-xs p-0 h-6 w-6 flex items-center justify-center hover:bg-blue-100 dark:hover:bg-blue-900"
-					title={isExpanded ? "Hide instances" : "Show instances"}
-				>
-					<svg 
-						xmlns="http://www.w3.org/2000/svg" 
-						className={`h-4 w-4 text-blue-600 dark:text-blue-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} 
-						fill="none" 
-						viewBox="0 0 24 24" 
-						stroke="currentColor"
+				{onToggleExpand && (
+					<button
+						onClick={() => onToggleExpand(address)}
+						className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-blue-200 dark:hover:bg-slate-600 transition-colors"
+						title={isExpanded ? "Hide instances" : "Show instances"}
 					>
-						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-					</svg>
-				</button>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							className={`h-4 w-4 text-blue-600 dark:text-blue-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+						</svg>
+					</button>
+				)}
 			</td>
 			<td className="p-4 font-semibold text-slate-700 dark:text-slate-300">
 				<span className="badge badge-sm bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-200 font-semibold">
@@ -239,7 +204,7 @@ export const ProcessTableRow = ({
 							Starting...
 						</>
 					) : (
-						"Start New"
+						"Start"
 					)}
 				</button>
 			</td>

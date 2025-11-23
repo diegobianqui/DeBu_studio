@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState } from "react";
 import type { NextPage } from "next";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { ProcessTableRow } from "~~/components/debu/ProcessTableRow";
@@ -11,26 +11,11 @@ const Browse: NextPage = () => {
   const [filterName, setFilterName] = useState("");
   const [filterAddress, setFilterAddress] = useState("");
   const [expandedProcesses, setExpandedProcesses] = useState<Set<string>>(new Set());
-  const [processAddresses, setProcessAddresses] = useState<string[]>([]);
 
   const { data: deployedProcessesCount } = useScaffoldReadContract({
     contractName: "DeBuDeployer",
     functionName: "getDeployedProcessesCount",
   });
-
-  // Fetch all process addresses
-  useEffect(() => {
-    if (deployedProcessesCount) {
-      const count = Number(deployedProcessesCount);
-      const addresses: string[] = [];
-      
-      for (let i = 0; i < count; i++) {
-        // We'll fetch these using the ProcessAddressFetcher component below
-      }
-    }
-  }, [deployedProcessesCount]);
-
-  const categories = ["Public Administration", "Private Administration", "Supply Chain", "Other"];
 
   const toggleExpandProcess = (address: string) => {
     const newExpanded = new Set(expandedProcesses);
@@ -41,6 +26,8 @@ const Browse: NextPage = () => {
     }
     setExpandedProcesses(newExpanded);
   };
+
+  const categories = ["Public Administration", "Private Administration", "Supply Chain", "Other"];
 
   return (
     <div className="flex flex-col flex-grow px-4 lg:px-8 py-4 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
