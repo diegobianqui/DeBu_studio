@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { CopyToClipboard } from "react-copy-to-clipboard";
 import { isAddress } from "viem";
 import { useBytecode } from "wagmi";
 import { CheckCircleIcon, DocumentDuplicateIcon } from "@heroicons/react/24/outline";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth";
+import { hardhat } from "viem/chains";
 
 type AddressProps = {
   address?: string | undefined;
@@ -32,8 +33,18 @@ export const Address = ({ address, disableAddressLink, format, size = "base" }: 
   const [ens, setEns] = useState<string | null>(null);
   const [ensAvatar, setEnsAvatar] = useState<string | null>(null);
   const [addressCopied, setAddressCopied] = useState(false);
+  const { targetNetwork } = useTargetNetwork();
 
   const checkAddress = isAddress(address as string);
+
+  // Determine the explorer URL based on the network
+  const getExplorerUrl = () => {
+    const isLocalNetwork = targetNetwork.id === hardhat.id;
+    if (isLocalNetwork) {
+      return `http://localhost:3000/blockexplorer/address/${address}`;
+    }
+    return `https://etherscan.io/address/${address}`;
+  };
 
   // Skeleton UI
   if (!address) {
@@ -66,7 +77,7 @@ export const Address = ({ address, disableAddressLink, format, size = "base" }: 
         <a
           className={`ml-1.5 text-${size} font-normal`}
           target="_blank"
-          href={`https://etherscan.io/address/${address}`}
+          href={getExplorerUrl()}
           rel="noopener noreferrer"
         >
           {format === "short" ? address.slice(0, 6) + "..." + address.slice(-4) : address}
@@ -78,20 +89,21 @@ export const Address = ({ address, disableAddressLink, format, size = "base" }: 
           aria-hidden="true"
         />
       ) : (
-        <CopyToClipboard
-          text={address}
-          onCopy={() => {
+        <div
+          onClick={() => {
+            navigator.clipboard.writeText(address);
             setAddressCopied(true);
             setTimeout(() => {
               setAddressCopied(false);
             }, 800);
           }}
+          className="cursor-pointer"
         >
           <DocumentDuplicateIcon
-            className="ml-1.5 text-xl font-normal text-sky-600 h-5 w-5 cursor-pointer"
+            className="ml-1.5 text-xl font-normal text-sky-600 h-5 w-5"
             aria-hidden="true"
           />
-        </CopyToClipboard>
+        </div>
       )}
     </div>
   );

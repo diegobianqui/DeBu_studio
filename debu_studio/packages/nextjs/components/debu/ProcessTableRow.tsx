@@ -1,9 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { hardhat } from "viem/chains";
 import { notification } from "~~/utils/scaffold-eth";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth";
 
 const PROCESS_TEMPLATE_ABI = [
 	{
@@ -63,6 +66,7 @@ export const ProcessTableRow = ({
 	onToggleExpand,
 }: ProcessTableRowProps) => {
 	const router = useRouter();
+	const { targetNetwork } = useTargetNetwork();
 
 	const { data: name } = useReadContract({
 		address: address as `0x${string}`,
@@ -189,8 +193,16 @@ export const ProcessTableRow = ({
 					{stepCount ? Number(stepCount) : 0} steps
 				</span>
 			</td>
-			<td className="p-4 font-mono text-xs text-slate-600 dark:text-slate-400 cursor-help hover:text-blue-600 dark:hover:text-blue-400" title={address}>
-				{shortAddress}
+			<td className="p-4 font-mono text-xs">
+				<a 
+					href={targetNetwork.id === hardhat.id ? `http://localhost:3000/blockexplorer/address/${address}` : `https://etherscan.io/address/${address}`}
+					target="_blank"
+					rel="noopener noreferrer"
+					className="text-slate-600 dark:text-slate-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+					title={address}
+				>
+					{shortAddress}
+				</a>
 			</td>
 			<td className="p-4 text-center">
 				<button
