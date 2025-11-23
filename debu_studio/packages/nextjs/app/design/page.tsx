@@ -8,9 +8,23 @@ import { StepBuilder, ProcessStep } from "~~/components/debu/StepBuilder";
 const Design: NextPage = () => {
   const [processName, setProcessName] = useState("");
   const [processDescription, setProcessDescription] = useState("");
+  const [processCategory, setProcessCategory] = useState("");
   const [steps, setSteps] = useState<ProcessStep[]>([]);
 
   const { writeContractAsync: deployProcess } = useScaffoldWriteContract("DeBuDeployer");
+
+  const categories = [
+    "Finance",
+    "Human Resources",
+    "Legal",
+    "Operations",
+    "IT & Technology",
+    "Procurement",
+    "Customer Service",
+    "Compliance",
+    "Marketing",
+    "Other"
+  ];
 
   const handleAddStep = (newStep: ProcessStep) => {
     setSteps([...steps, newStep]);
@@ -20,11 +34,12 @@ const Design: NextPage = () => {
     try {
       await deployProcess({
         functionName: "deployProcess",
-        args: [processName, processDescription, steps],
+        args: [processName, processDescription, processCategory, steps],
       });
       // Reset form after successful deployment
       setProcessName("");
       setProcessDescription("");
+      setProcessCategory("");
       setSteps([]);
     } catch (e) {
       console.error("Error deploying process:", e);
@@ -64,6 +79,22 @@ const Design: NextPage = () => {
                 value={processDescription}
                 onChange={e => setProcessDescription(e.target.value)}
               ></textarea>
+            </div>
+
+            <div className="form-control w-full">
+              <label className="label">
+                <span className="label-text">Category</span>
+              </label>
+              <select
+                className="select select-bordered w-full"
+                value={processCategory}
+                onChange={e => setProcessCategory(e.target.value)}
+              >
+                <option value="" disabled>Select a category</option>
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
             </div>
 
             <div className="divider">Steps</div>
@@ -114,7 +145,7 @@ const Design: NextPage = () => {
               <button 
                 className="btn btn-primary"
                 onClick={handleDeploy}
-                disabled={steps.length === 0 || !processName}
+                disabled={steps.length === 0 || !processName || !processCategory}
               >
                 Deploy Process Blueprint
               </button>

@@ -18,6 +18,7 @@ contract ProcessTemplate {
 
     string public name;
     string public description;
+    string public category;
     uint256 public version;
     address public creator;
     
@@ -31,12 +32,14 @@ contract ProcessTemplate {
     constructor(
         string memory _name,
         string memory _description,
+        string memory _category,
         uint256 _version,
         address _creator,
         Step[] memory _steps
     ) {
         name = _name;
         description = _description;
+        category = _category;
         version = _version;
         creator = _creator;
         

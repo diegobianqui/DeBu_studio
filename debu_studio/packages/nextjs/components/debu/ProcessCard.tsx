@@ -20,6 +20,13 @@ const PROCESS_TEMPLATE_ABI = [
 	},
 	{
 		inputs: [],
+		name: "category",
+		outputs: [{ internalType: "string", name: "", type: "string" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [],
 		name: "getStepCount",
 		outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
 		stateMutability: "view",
@@ -45,6 +52,12 @@ export const ProcessCard = ({ address }: { address: string }) => {
 		address: address,
 		abi: PROCESS_TEMPLATE_ABI,
 		functionName: "description",
+	});
+
+	const { data: category } = useReadContract({
+		address: address,
+		abi: PROCESS_TEMPLATE_ABI,
+		functionName: "category",
 	});
 
 	const { data: stepCount } = useReadContract({
@@ -73,8 +86,13 @@ export const ProcessCard = ({ address }: { address: string }) => {
 			<div className="card-body">
 				<h2 className="card-title">{name as string || "Loading..."}</h2>
 				<p>{description as string || "..."}</p>
-				<div className="badge badge-secondary">
-					{Number(stepCount || 0)} Steps
+				<div className="flex gap-2">
+					<div className="badge badge-primary">
+						{category as string || "Uncategorized"}
+					</div>
+					<div className="badge badge-secondary">
+						{Number(stepCount || 0)} Steps
+					</div>
 				</div>
 				<div className="card-actions justify-end mt-4">
 					<button
