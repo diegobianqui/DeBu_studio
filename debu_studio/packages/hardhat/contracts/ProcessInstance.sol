@@ -49,10 +49,11 @@ contract ProcessInstance {
         currentStepIndex++;
     }
 
-    // Support for payment steps - accepts ETH value
     function executeStepWithPayment(string memory _data) public payable {
         require(currentStepIndex < template.getStepCount(), "Process already completed");
         require(msg.value > 0, "Payment required");
+        
+        // In a real implementation, we would check permissions based on the step config
         
         stepStates[currentStepIndex] = StepState({
             status: StepStatus.Completed,
@@ -63,6 +64,9 @@ contract ProcessInstance {
 
         emit StepCompleted(currentStepIndex, msg.sender, _data);
         currentStepIndex++;
+        
+        // The payment (msg.value) is now held in the contract
+        // In a production system, you would transfer it to a treasury or beneficiary
     }
 
     function getStepState(uint256 index) public view returns (StepState memory) {

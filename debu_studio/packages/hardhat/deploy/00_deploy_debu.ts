@@ -11,13 +11,6 @@ const deployDeBu: DeployFunction = async function (hre: HardhatRuntimeEnvironmen
     log: true,
     autoMine: true,
   });
-
-  await deploy("StepHandlers", {
-    from: deployer,
-    args: [],
-    log: true,
-    autoMine: true,
-  });
 };
 
 export default deployDeBu;

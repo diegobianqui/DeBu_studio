@@ -37,9 +37,9 @@ const Home: NextPage = () => {
               <p className="mb-4">
                 Explore and instantiate existing process templates.
               </p>
-              <button className="btn btn-secondary btn-sm" disabled>
-                Coming Soon
-              </button>
+              <Link href="/browse" className="btn btn-secondary btn-sm">
+                Go to Browse
+              </Link>
             </div>
           </div>
         </div>

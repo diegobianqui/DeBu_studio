@@ -144,7 +144,7 @@ export const InstanceCard = ({ address }: { address: string }) => {
   });
 
   // 5. Check if Completed
-  const { data: isCompleted } = useReadContract({
+  const { data: isCompleted, refetch: refetchIsCompleted } = useReadContract({
     address: validAddress,
     abi: PROCESS_INSTANCE_ABI,
     functionName: "isCompleted",
@@ -242,6 +242,7 @@ export const InstanceCard = ({ address }: { address: string }) => {
       
       setStepData("");
       refetchStepIndex();
+      refetchIsCompleted();
       notification.success("Step completed successfully!");
     } catch (e) {
       console.error("Error executing step:", e);

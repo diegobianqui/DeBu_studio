@@ -66,7 +66,7 @@ const Design: NextPage = () => {
             Design Process
           </span>
           <span className="block text-lg mt-1 text-slate-600 dark:text-slate-400">
-            Create your Decentralized Bureaucratic Process
+            Create your Process Blueprint
           </span>
         </h1>
 
