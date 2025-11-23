@@ -73,19 +73,21 @@ const PROCESS_TEMPLATE_ABI = [
   }
 ] as const;
 
-export const InstanceCard = ({ address }: { address: string }) => {
+export const InstanceCard = ({ address, isFullView = true }: { address: string; isFullView?: boolean }) => {
   const [stepData, setStepData] = useState("");
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [lastConfirmedStepIndex, setLastConfirmedStepIndex] = useState<bigint | null>(null);
 
   // 1. Get the Template Address
   const { data: templateAddress } = useReadContract({
-    address: address,
+    address: address as `0x${string}`,
     abi: PROCESS_INSTANCE_ABI,
     functionName: "template",
   });
 
   // 2. Get the Template Name
   const { data: processName } = useReadContract({
-    address: templateAddress,
+    address: templateAddress as `0x${string}`,
     abi: PROCESS_TEMPLATE_ABI,
     functionName: "name",
     query: {
@@ -95,14 +97,17 @@ export const InstanceCard = ({ address }: { address: string }) => {
 
   // 3. Get Current Step Index
   const { data: currentStepIndex, refetch: refetchStepIndex } = useReadContract({
-    address: address,
+    address: address as `0x${string}`,
     abi: PROCESS_INSTANCE_ABI,
     functionName: "currentStepIndex",
+    query: {
+        enabled: !isExecuting, // Don't auto-refetch while executing
+    }
   });
 
   // 3.5 Get Step Count
   const { data: stepCount } = useReadContract({
-    address: templateAddress,
+    address: templateAddress as `0x${string}`,
     abi: PROCESS_TEMPLATE_ABI,
     functionName: "getStepCount",
     query: {
@@ -112,90 +117,134 @@ export const InstanceCard = ({ address }: { address: string }) => {
 
   // 4. Get Current Step Details
   const { data: currentStep } = useReadContract({
-    address: templateAddress,
+    address: templateAddress as `0x${string}`,
     abi: PROCESS_TEMPLATE_ABI,
     functionName: "getStep",
     args: [currentStepIndex || 0n],
     query: {
-        enabled: !!templateAddress && currentStepIndex !== undefined && stepCount !== undefined && currentStepIndex < stepCount,
+        enabled: !!templateAddress && currentStepIndex !== undefined && stepCount !== undefined && currentStepIndex < stepCount && !isExecuting,
     }
   });
 
   // 5. Check if Completed
   const { data: isCompleted } = useReadContract({
-    address: address,
+    address: address as `0x${string}`,
     abi: PROCESS_INSTANCE_ABI,
     functionName: "isCompleted",
+    query: {
+        enabled: !isExecuting, // Don't auto-refetch while executing
+    }
   });
 
   const { writeContractAsync, isPending } = useWriteContract();
 
   const handleExecute = async () => {
     try {
+      // Store the current step index before executing
+      setLastConfirmedStepIndex(currentStepIndex || null);
+      setIsExecuting(true);
       await writeContractAsync({
-        address: address,
+        address: address as `0x${string}`,
         abi: PROCESS_INSTANCE_ABI,
         functionName: "executeStep",
         args: [stepData],
       });
       setStepData("");
-      refetchStepIndex();
+      // Wait a moment before refetching to allow blockchain to confirm
+      setTimeout(() => {
+        refetchStepIndex();
+        setIsExecuting(false);
+      }, 2000);
     } catch (e) {
       console.error("Error executing step:", e);
+      setIsExecuting(false);
     }
   };
 
-  return (
-    <div className="card w-full bg-base-100 shadow-xl mb-4">
-      <div className="card-body">
-        <div className="flex justify-between items-start">
-            <div>
-                <h2 className="card-title">{processName as string || "Loading..."}</h2>
-                <div className="text-xs text-gray-500 flex items-center gap-1">
-                    Instance: <Address address={address} />
-                </div>
-            </div>
-            <div className="badge badge-primary">
-                {isCompleted ? "Completed" : `Step ${(Number(currentStepIndex) || 0) + 1}`}
-            </div>
+  if (!isFullView) {
+    // Compact view for list display
+    return (
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+            {processName as string || "Loading..."}
+          </p>
+          <p className="text-xs font-mono text-slate-500 dark:text-slate-400 truncate">
+            {address}
+          </p>
         </div>
-
-        {!isCompleted && currentStep && (
-            <div className="mt-4 p-4 bg-base-200 rounded-lg">
-                <h3 className="font-bold text-lg">{currentStep.name}</h3>
-                <p className="text-sm mb-4">{currentStep.description}</p>
-                
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text">Action Input ({currentStep.actionType})</span>
-                    </label>
-                    <input 
-                        type="text" 
-                        className="input input-bordered" 
-                        placeholder="Enter data..."
-                        value={stepData}
-                        onChange={(e) => setStepData(e.target.value)}
-                    />
-                </div>
-                
-                <div className="card-actions justify-end mt-4">
-                    <button 
-                        className="btn btn-success btn-sm"
-                        onClick={handleExecute}
-                        disabled={isPending || !stepData}
-                    >
-                        {isPending ? "Executing..." : "Complete Step"}
-                    </button>
-                </div>
-            </div>
-        )}
-
-        {isCompleted && (
-            <div className="alert alert-success mt-4">
-                <span>Process successfully completed! 🎉</span>
-            </div>
-        )}
+        <div className="flex-shrink-0">
+          <span className={`badge badge-sm font-semibold ${isCompleted ? "bg-green-100 text-green-900 dark:bg-green-900 dark:text-green-200" : "bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-200"}`}>
+            {isCompleted ? "Completed" : `Step ${(Number(currentStepIndex) || 0) + 1}`}
+          </span>
+        </div>
       </div>
+    );
+  }
+
+  // Full view for execution
+  return (
+    <div className="w-full">
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{processName as string || "Loading..."}</h2>
+          <div className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-1 break-all">
+            {address}
+          </div>
+        </div>
+        <div className={`badge badge-lg font-semibold ${isCompleted ? "bg-green-100 text-green-900 dark:bg-green-900 dark:text-green-200" : "bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-200"}`}>
+          {isCompleted ? "Completed" : isExecuting ? "⏳ Waiting for confirmation..." : `Step ${(Number(lastConfirmedStepIndex ?? currentStepIndex) || 0) + 1}/${Number(stepCount) || 0}`}
+        </div>
+      </div>
+
+      <div className="divider"></div>
+
+      {!isCompleted && currentStep && (
+        <div className="mt-6 p-6 bg-gradient-to-br from-blue-50 to-sky-50 dark:from-blue-900/20 dark:to-sky-900/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+          <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100 mb-2">{currentStep.name}</h3>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">{currentStep.description}</p>
+          
+          <div className="form-control mb-4">
+            <label className="label py-1">
+              <span className="label-text font-semibold text-slate-700 dark:text-slate-300">Action Input ({currentStep.actionType})</span>
+            </label>
+            <textarea 
+              className="textarea textarea-bordered focus:textarea-primary bg-white dark:bg-slate-700 dark:text-slate-100"
+              placeholder="Enter data or paste IPFS hash..."
+              rows={4}
+              value={stepData}
+              onChange={(e) => setStepData(e.target.value)}
+              disabled={isExecuting}
+            />
+          </div>
+          
+          <div className="flex gap-2">
+            <button 
+              className="btn btn-primary flex-1"
+              onClick={handleExecute}
+              disabled={isPending || !stepData || isExecuting}
+            >
+              {isPending || isExecuting ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  {isExecuting ? "Waiting for confirmation..." : "Executing..."}
+                </>
+              ) : (
+                "Complete Step"
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isCompleted && (
+        <div className="alert alert-success shadow-lg mt-6">
+          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="font-semibold">Process successfully completed! 🎉</span>
+        </div>
+      )}
     </div>
   );
-};
+}

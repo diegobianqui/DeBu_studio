@@ -4,11 +4,13 @@ import { useEffect, useState, useMemo } from "react";
 import type { NextPage } from "next";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { ProcessTableRow } from "~~/components/debu/ProcessTableRow";
+import { InstancesList } from "~~/components/debu/InstancesList";
 
 const Browse: NextPage = () => {
   const [filterCategory, setFilterCategory] = useState("");
   const [filterName, setFilterName] = useState("");
   const [filterAddress, setFilterAddress] = useState("");
+  const [expandedProcesses, setExpandedProcesses] = useState<Set<string>>(new Set());
   const [processAddresses, setProcessAddresses] = useState<string[]>([]);
 
   const { data: deployedProcessesCount } = useScaffoldReadContract({
@@ -29,6 +31,16 @@ const Browse: NextPage = () => {
   }, [deployedProcessesCount]);
 
   const categories = ["Public Administration", "Private Administration", "Supply Chain", "Other"];
+
+  const toggleExpandProcess = (address: string) => {
+    const newExpanded = new Set(expandedProcesses);
+    if (newExpanded.has(address)) {
+      newExpanded.delete(address);
+    } else {
+      newExpanded.add(address);
+    }
+    setExpandedProcesses(newExpanded);
+  };
 
   return (
     <div className="flex flex-col flex-grow px-4 lg:px-8 py-4 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
@@ -95,6 +107,7 @@ const Browse: NextPage = () => {
                 <table className="table w-full">
                   <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                     <tr>
+                      <th className="text-white font-bold w-8"></th>
                       <th className="text-white font-bold">Category</th>
                       <th className="text-white font-bold">Name</th>
                       <th className="text-white font-bold">Description</th>
@@ -111,6 +124,8 @@ const Browse: NextPage = () => {
                         filterCategory={filterCategory}
                         filterName={filterName}
                         filterAddress={filterAddress}
+                        expandedProcesses={expandedProcesses}
+                        onToggleExpand={toggleExpandProcess}
                       />
                     ))}
                   </tbody>
@@ -140,12 +155,16 @@ const ProcessAddressFetcher = ({
   index, 
   filterCategory, 
   filterName, 
-  filterAddress 
+  filterAddress,
+  expandedProcesses,
+  onToggleExpand
 }: { 
   index: number;
   filterCategory?: string;
   filterName?: string;
   filterAddress?: string;
+  expandedProcesses: Set<string>;
+  onToggleExpand: (address: string) => void;
 }) => {
   const { data: address } = useScaffoldReadContract({
     contractName: "DeBuDeployer",
@@ -156,13 +175,24 @@ const ProcessAddressFetcher = ({
   if (!address) return null;
 
   return (
-    <ProcessTableRow 
-      address={address}
-      index={index}
-      filterCategory={filterCategory}
-      filterName={filterName}
-      filterAddress={filterAddress}
-    />
+    <>
+      <ProcessTableRow 
+        address={address}
+        index={index}
+        filterCategory={filterCategory}
+        filterName={filterName}
+        filterAddress={filterAddress}
+        isExpanded={expandedProcesses.has(address)}
+        onToggleExpand={onToggleExpand}
+      />
+      {expandedProcesses.has(address) && (
+        <tr className="bg-blue-50/50 dark:bg-slate-700/30">
+          <td colSpan={7} className="p-0">
+            <InstancesList templateAddress={address} />
+          </td>
+        </tr>
+      )}
+    </>
   );
 };
 
