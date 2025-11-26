@@ -11,6 +11,7 @@ import { WagmiProvider } from "wagmi";
 import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
 import { ProcessNavBar } from "~~/components/debu/ProcessNavBar";
+import { Ethereum3DBackground } from "~~/components/Ethereum3DBackground";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
 
@@ -20,7 +21,8 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <>
-      <div className={`flex flex-col min-h-screen `}>
+      <Ethereum3DBackground />
+      <div className={`flex flex-col min-h-screen relative z-10`}>
         <Header />
         {!isHomepage && (
           <div className="flex justify-center mt-4 mb-2 z-10">
