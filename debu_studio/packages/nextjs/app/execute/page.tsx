@@ -1,11 +1,12 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
 import { InstanceCard } from "~~/components/debu/InstanceCard";
 
-const Execute: NextPage = () => {
+const ExecuteContent = () => {
   const { address } = useAccount();
   const searchParams = useSearchParams();
   const instanceParam = searchParams.get("instance");
@@ -62,6 +63,20 @@ const Execute: NextPage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const Execute: NextPage = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center flex-col flex-grow pt-10">
+        <div className="px-5 w-full max-w-4xl text-center">
+          <span className="loading loading-spinner loading-lg"></span>
+        </div>
+      </div>
+    }>
+      <ExecuteContent />
+    </Suspense>
   );
 };
 

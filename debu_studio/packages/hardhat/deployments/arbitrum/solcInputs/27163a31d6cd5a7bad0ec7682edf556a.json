@@ -1,0 +1,43 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/DeBuDeployer.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity >=0.8.0 <0.9.0;\n\nimport \"./ProcessTemplate.sol\";\n\n/**\n * @title DeBuDeployer\n * @notice Factory contract for deploying new Process Templates\n */\ncontract DeBuDeployer {\n    \n    // Events to index deployments for the frontend\n    event ProcessDeployed(\n        address indexed processAddress, \n        address indexed creator, \n        string name,\n        string category,\n        uint256 version\n    );\n\n    address[] public deployedProcesses;\n\n    /**\n     * @notice Deploys a new Process Template\n     * @param _name Name of the process\n     * @param _description Brief description\n     * @param _category Category of the process (e.g., \"Finance\", \"HR\", \"Legal\")\n     * @param _steps Array of steps defining the process flow\n     */\n    function deployProcess(\n        string memory _name,\n        string memory _description,\n        string memory _category,\n        ProcessTemplate.Step[] memory _steps\n    ) public returns (address) {\n        \n        ProcessTemplate newProcess = new ProcessTemplate(\n            _name,\n            _description,\n            _category,\n            1, // Initial version is always 1\n            msg.sender,\n            _steps\n        );\n\n        deployedProcesses.push(address(newProcess));\n        \n        emit ProcessDeployed(address(newProcess), msg.sender, _name, _category, 1);\n        \n        return address(newProcess);\n    }\n\n    function getDeployedProcessesCount() public view returns (uint256) {\n        return deployedProcesses.length;\n    }\n\n    function getDeployedProcess(uint256 index) public view returns (address) {\n        return deployedProcesses[index];\n    }\n}"
+    },
+    "contracts/ProcessInstance.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity >=0.8.0 <0.9.0;\n\ninterface IProcessTemplate {\n    function getStepCount() external view returns (uint256);\n}\n\n/**\n * @title ProcessInstance\n * @notice Represents a running instance of a process\n */\ncontract ProcessInstance {\n    \n    enum StepStatus { Pending, Completed, Rejected }\n\n    struct StepState {\n        StepStatus status;\n        address actor;\n        string data; // IPFS hash or raw data\n        uint256 timestamp;\n    }\n\n    IProcessTemplate public template;\n    uint256 public currentStepIndex;\n    mapping(uint256 => StepState) public stepStates;\n    address public initiator;\n\n    event StepCompleted(uint256 indexed stepIndex, address indexed actor, string data);\n\n    constructor(address _template, address _initiator) {\n        template = IProcessTemplate(_template);\n        initiator = _initiator;\n        currentStepIndex = 0;\n    }\n\n    function executeStep(string memory _data) public {\n        require(currentStepIndex < template.getStepCount(), \"Process already completed\");\n        \n        // In a real implementation, we would check permissions based on the step config\n        \n        stepStates[currentStepIndex] = StepState({\n            status: StepStatus.Completed,\n            actor: msg.sender,\n            data: _data,\n            timestamp: block.timestamp\n        });\n\n        emit StepCompleted(currentStepIndex, msg.sender, _data);\n        currentStepIndex++;\n    }\n\n    function executeStepWithPayment(string memory _data) public payable {\n        require(currentStepIndex < template.getStepCount(), \"Process already completed\");\n        require(msg.value > 0, \"Payment required\");\n        \n        // In a real implementation, we would check permissions based on the step config\n        \n        stepStates[currentStepIndex] = StepState({\n            status: StepStatus.Completed,\n            actor: msg.sender,\n            data: _data,\n            timestamp: block.timestamp\n        });\n\n        emit StepCompleted(currentStepIndex, msg.sender, _data);\n        currentStepIndex++;\n        \n        // The payment (msg.value) is now held in the contract\n        // In a production system, you would transfer it to a treasury or beneficiary\n    }\n\n    function getStepState(uint256 index) public view returns (StepState memory) {\n        return stepStates[index];\n    }\n\n    function isCompleted() public view returns (bool) {\n        return currentStepIndex >= template.getStepCount();\n    }\n}\n"
+    },
+    "contracts/ProcessTemplate.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity >=0.8.0 <0.9.0;\n\nimport \"./ProcessInstance.sol\";\n\n/**\n * @title ProcessTemplate\n * @notice Represents an immutable blueprint of a bureaucratic process\n */\ncontract ProcessTemplate {\n    \n    struct Step {\n        string name;\n        string description;\n        string actionType; // e.g., \"form\", \"approval\", \"payment\"\n        string config;     // JSON string for schema/validation rules\n    }\n\n    string public name;\n    string public description;\n    string public category;\n    uint256 public version;\n    address public creator;\n    \n    Step[] public steps;\n\n    event InstanceCreated(address indexed instance, address indexed creator);\n    \n    // Keep track of instances per user for easy retrieval\n    mapping(address => address[]) public userInstances;\n\n    constructor(\n        string memory _name,\n        string memory _description,\n        string memory _category,\n        uint256 _version,\n        address _creator,\n        Step[] memory _steps\n    ) {\n        name = _name;\n        description = _description;\n        category = _category;\n        version = _version;\n        creator = _creator;\n        \n        for(uint i = 0; i < _steps.length; i++) {\n            steps.push(_steps[i]);\n        }\n    }\n\n    function getStepCount() public view returns (uint256) {\n        return steps.length;\n    }\n    \n    function getStep(uint256 index) public view returns (Step memory) {\n        return steps[index];\n    }\n    \n    function instantiate() external returns (address instance) {\n        ProcessInstance newInstance = new ProcessInstance(address(this), msg.sender);\n        userInstances[msg.sender].push(address(newInstance));\n        emit InstanceCreated(address(newInstance), msg.sender);\n        return address(newInstance);\n    }\n\n    function getUserInstances(address user) external view returns (address[] memory) {\n        return userInstances[user];\n    }\n}"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "viaIR": true,
+    "evmVersion": "paris",
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "storageLayout",
+          "evm.gasEstimates"
+        ],
+        "": [
+          "ast"
+        ]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": true
+    }
+  }
+}

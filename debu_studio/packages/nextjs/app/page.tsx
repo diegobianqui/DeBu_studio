@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import type { NextPage } from "next";
 import { PencilSquareIcon, RectangleStackIcon } from "@heroicons/react/24/outline";
 
@@ -9,6 +10,11 @@ const Home: NextPage = () => {
     <>
       <div className="flex items-center flex-col grow pt-10">
         <div className="px-5">
+          <div className="flex justify-center mb-6">
+            <div className="relative w-32 h-32">
+              <Image alt="DeBu Studio logo" fill src="/debu-logo.png" className="object-contain" />
+            </div>
+          </div>
           <h1 className="text-center">
             <span className="block text-2xl mb-2">Welcome to</span>
             <span className="block text-4xl font-bold">DeBu Studio</span>
