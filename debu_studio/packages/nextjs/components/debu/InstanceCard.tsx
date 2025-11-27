@@ -82,6 +82,60 @@ const PROCESS_TEMPLATE_ABI = [
   }
 ] as const;
 
+const StepArrowWithName = ({ 
+  index, 
+  isFirst, 
+  isCurrent, 
+  isCompleted, 
+  bgGradient, 
+  clipPath,
+  templateAddress 
+}: { 
+  index: number; 
+  isFirst: boolean; 
+  isCurrent: boolean; 
+  isCompleted: boolean; 
+  bgGradient: string; 
+  clipPath: string;
+  templateAddress: `0x${string}`;
+}) => {
+  // Fetch step details
+  const { data: stepData } = useReadContract({
+    address: templateAddress,
+    abi: PROCESS_TEMPLATE_ABI,
+    functionName: "getStep",
+    args: [BigInt(index)],
+    query: {
+      enabled: !!templateAddress,
+    }
+  });
+
+  const stepName = stepData?.name || `Step ${index + 1}`;
+
+  return (
+    <div
+      className={`relative flex-shrink-0 flex items-center justify-center bg-gradient-to-br ${bgGradient} text-white w-40 h-16 transition-all hover:shadow-lg hover:scale-105 shadow-md`}
+      style={{
+        clipPath: clipPath,
+        marginLeft: isFirst ? 0 : "-18px",
+      }}
+      title={stepName}
+    >
+      <div className="flex flex-col items-center text-center px-4">
+        <div className={`badge badge-xs ${isCurrent ? "bg-white/30" : "bg-white/20"} border-none mb-0.5`}>
+          Step {index + 1}
+        </div>
+        <span className="font-bold text-xs line-clamp-1">
+          {stepName}
+        </span>
+        <span className="text-[10px] opacity-80">
+          {isCompleted ? "✓" : isCurrent ? "→" : "—"}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 export const InstanceCard = ({ address }: { address: string }) => {
   const [stepData, setStepData] = useState("");
   const [signatureData, setSignatureData] = useState<{ signature: `0x${string}`, hash: string } | null>(null);
@@ -297,23 +351,16 @@ export const InstanceCard = ({ address }: { address: string }) => {
                             }
 
                             return (
-                                <div
+                                <StepArrowWithName
                                     key={index}
-                                    className={`relative flex-shrink-0 flex items-center justify-center bg-gradient-to-br ${bgGradient} text-white w-40 h-16 transition-all hover:shadow-lg hover:scale-105 shadow-md`}
-                                    style={{
-                                        clipPath: clipPath,
-                                        marginLeft: isFirst ? 0 : "-18px",
-                                    }}
-                                >
-                                    <div className="flex flex-col items-center text-center px-4">
-                                        <div className={`badge badge-xs ${isCurrent ? "bg-white/30" : "bg-white/20"} border-none mb-0.5`}>
-                                            Step {index + 1}
-                                        </div>
-                                        <span className="font-bold text-xs line-clamp-1">
-                                            {isCompleted ? "✓" : isCurrent ? "→" : "—"}
-                                        </span>
-                                    </div>
-                                </div>
+                                    index={index}
+                                    isFirst={isFirst}
+                                    isCurrent={isCurrent}
+                                    isCompleted={isCompleted}
+                                    bgGradient={bgGradient}
+                                    clipPath={clipPath}
+                                    templateAddress={templateAddress as `0x${string}`}
+                                />
                             );
                         })}
                     </div>

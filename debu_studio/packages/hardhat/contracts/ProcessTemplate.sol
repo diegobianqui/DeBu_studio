@@ -21,10 +21,12 @@ contract ProcessTemplate {
     string public category;
     uint256 public version;
     address public creator;
+    uint256 public instantiationCount; // Track usage for rankings
     
     Step[] public steps;
 
     event InstanceCreated(address indexed instance, address indexed creator);
+    event InstanceCountIncremented(address indexed template, uint256 newCount);
     
     // Keep track of instances per user for easy retrieval
     mapping(address => address[]) public userInstances;
@@ -59,7 +61,12 @@ contract ProcessTemplate {
     function instantiate() external returns (address instance) {
         ProcessInstance newInstance = new ProcessInstance(address(this), msg.sender);
         userInstances[msg.sender].push(address(newInstance));
+        
+        // Increment instantiation counter for rankings
+        instantiationCount++;
+        
         emit InstanceCreated(address(newInstance), msg.sender);
+        emit InstanceCountIncremented(address(this), instantiationCount);
         return address(newInstance);
     }
 

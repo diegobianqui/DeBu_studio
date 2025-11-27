@@ -30,9 +30,9 @@ const Browse: NextPage = () => {
   const categories = ["Public Administration", "Private Administration", "Supply Chain", "Other"];
 
   return (
-    <div className="flex flex-col flex-grow px-4 lg:px-8 py-4">
+    <div className="flex flex-col flex-grow px-4 lg:px-8 pt-10">
       <div className="max-w-6xl w-full mx-auto">
-        <h1 className="text-center mb-6">
+        <h1 className="text-center mb-8">
           <span className="block text-4xl font-bold text-base-content">
             Browse Processes
           </span>
@@ -99,6 +99,7 @@ const Browse: NextPage = () => {
                       <th className="font-bold">Name</th>
                       <th className="font-bold">Description</th>
                       <th className="font-bold text-center">Steps</th>
+                      <th className="font-bold text-center">Usage</th>
                       <th className="font-bold">Address</th>
                       <th className="font-bold text-center">Action</th>
                     </tr>
@@ -174,7 +175,7 @@ const ProcessAddressFetcher = ({
       />
       {expandedProcesses.has(address) && (
         <tr className="bg-blue-50/50 dark:bg-slate-700/30">
-          <td colSpan={7} className="p-0">
+          <td colSpan={8} className="p-0">
             <InstancesList templateAddress={address} />
           </td>
         </tr>

@@ -3,12 +3,22 @@
 import { useState, useEffect, useRef } from "react";
 import type { NextPage } from "next";
 import { useRouter } from "next/navigation";
-import { useAccount, useChainId } from "wagmi";
+import { useAccount, useChainId, usePublicClient, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import * as chains from "viem/chains";
 import { useScaffoldWriteContract, useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { StepBuilder, ProcessStep } from "~~/components/debu/StepBuilder";
 import { notification } from "~~/utils/scaffold-eth";
 import { getBlockExplorerAddressLink } from "~~/utils/scaffold-eth/networks";
+
+const PROCESS_TEMPLATE_ABI = [
+  {
+    inputs: [],
+    name: "instantiate",
+    outputs: [{ internalType: "address", name: "instance", type: "address" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
 
 const Design: NextPage = () => {
   const router = useRouter();
@@ -25,12 +35,19 @@ const Design: NextPage = () => {
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   const pendingNavigationRef = useRef<(() => void) | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [executeTxHash, setExecuteTxHash] = useState<`0x${string}` | null>(null);
 
   const { address: connectedAddress } = useAccount();
   const chainId = useChainId();
+  const publicClient = usePublicClient();
   const { data: deployerContractData } = useDeployedContractInfo("DeBuDeployer");
   const { writeContractAsync: deployProcess, isPending } = useScaffoldWriteContract({
     contractName: "DeBuDeployer",
+  });
+  
+  const { writeContractAsync: executeInstantiate, isPending: isExecuting } = useWriteContract();
+  const { data: executeReceipt } = useWaitForTransactionReceipt({
+    hash: executeTxHash || undefined,
   });
 
   // Track unsaved changes
@@ -77,6 +94,27 @@ const Design: NextPage = () => {
     };
   }, [hasUnsavedChanges, deployedProcessAddress]);
 
+  // When execution transaction completes, extract instance address from logs
+  useEffect(() => {
+    if (executeReceipt && executeReceipt.logs && executeReceipt.logs.length > 0) {
+      try {
+        // The InstanceCreated event is emitted with the instance address
+        // The second topic (index 1) contains the instance address (32 bytes, padded)
+        if (executeReceipt.logs[0] && executeReceipt.logs[0].topics && executeReceipt.logs[0].topics[1]) {
+          const instanceAddress = `0x${executeReceipt.logs[0].topics[1].slice(-40)}`;
+          console.log("Created instance:", instanceAddress);
+          setExecuteTxHash(null);
+          setTimeout(() => {
+            router.push(`/execute?instance=${instanceAddress}`);
+          }, 500);
+        }
+      } catch (error) {
+        console.error("Error parsing instance address from receipt:", error);
+        notification.error("Instance created but could not navigate. Please try manually loading the instance.");
+      }
+    }
+  }, [executeReceipt, router]);
+
   const categories = [
     "Public Administration",
     "Private Administration",
@@ -101,18 +139,35 @@ const Design: NextPage = () => {
     }
 
     try {
-      const result = await deployProcess({
+      const txHash = await deployProcess({
         functionName: "deployProcess",
         args: [processName, processDescription, processCategory, steps],
       });
       
       setDeployedProcessName(processName);
       setDeployedStepsCount(steps.length);
-      if (result) {
-        setDeployedProcessAddress(result as string);
-      }
       
-      notification.success("Process deployed successfully!");
+      if (txHash && publicClient) {
+        // Get the transaction receipt to extract the contract address
+        const receipt = await publicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
+        
+        if (receipt && receipt.logs && receipt.logs.length > 0) {
+          try {
+            // The ProcessDeployed event is emitted with the process address
+            // Event signature: event ProcessDeployed(address indexed processAddress, address indexed creator, string name, string category, uint256 version);
+            // The first topic (index 0) is the event signature, the second topic (index 1) contains the process address
+            if (receipt.logs[0] && receipt.logs[0].topics && receipt.logs[0].topics[1]) {
+              const contractAddress = `0x${receipt.logs[0].topics[1].slice(-40)}`;
+              console.log("Deployed process:", contractAddress);
+              setDeployedProcessAddress(contractAddress);
+              notification.success("Process deployed successfully!");
+            }
+          } catch (error) {
+            console.error("Error parsing process address from receipt:", error);
+            notification.error("Process deployed but could not retrieve address. Please refresh the page.");
+          }
+        }
+      }
     } catch (e) {
       console.error("Error deploying process:", e);
       notification.error("Failed to deploy process");
@@ -130,9 +185,24 @@ const Design: NextPage = () => {
     setHasUnsavedChanges(false);
   };
 
-  const handleExecuteProcess = () => {
-    if (deployedProcessAddress) {
-      router.push(`/execute?instance=${deployedProcessAddress}`);
+  const handleExecuteProcess = async () => {
+    if (!deployedProcessAddress) {
+      notification.error("No process address available");
+      return;
+    }
+
+    try {
+      // Call instantiate() on the process template to create a new instance
+      const hash = await executeInstantiate({
+        address: deployedProcessAddress as `0x${string}`,
+        abi: PROCESS_TEMPLATE_ABI,
+        functionName: "instantiate",
+      });
+      setExecuteTxHash(hash);
+      notification.success("Creating process instance...");
+    } catch (err) {
+      console.error("Error creating instance:", err);
+      notification.error("Failed to create instance. Please try again.");
     }
   };
 
@@ -180,9 +250,9 @@ const Design: NextPage = () => {
   };
 
   return (
-    <div className="flex flex-col flex-grow px-4 lg:px-8 py-4">
+    <div className="flex flex-col flex-grow px-4 lg:px-8 pt-10">
       <div className="max-w-7xl w-full mx-auto">
-        <h1 className="text-center mb-6">
+        <h1 className="text-center mb-8 text-base-content">
           <span className="block text-4xl font-bold text-base-content">
             Design Process
           </span>
@@ -239,11 +309,21 @@ const Design: NextPage = () => {
                   <button 
                     className="btn btn-primary btn-sm w-full"
                     onClick={handleExecuteProcess}
+                    disabled={isExecuting}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Execute Process
+                    {isExecuting ? (
+                      <>
+                        <span className="loading loading-spinner loading-sm"></span>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Execute Process
+                      </>
+                    )}
                   </button>
                   
                   <span className="text-xs text-base-content/40">or</span>

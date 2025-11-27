@@ -39,6 +39,13 @@ const PROCESS_TEMPLATE_ABI = [
 	},
 	{
 		inputs: [],
+		name: "instantiationCount",
+		outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [],
 		name: "instantiate",
 		outputs: [{ internalType: "address", name: "instance", type: "address" }],
 		stateMutability: "nonpayable",
@@ -90,6 +97,12 @@ export const ProcessTableRow = ({
 		address: address as `0x${string}`,
 		abi: PROCESS_TEMPLATE_ABI,
 		functionName: "getStepCount",
+	});
+
+	const { data: instantiationCount } = useReadContract({
+		address: address as `0x${string}`,
+		abi: PROCESS_TEMPLATE_ABI,
+		functionName: "instantiationCount",
 	});
 
 	const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
@@ -147,7 +160,7 @@ export const ProcessTableRow = ({
 	if (!name || category === undefined) {
 		return (
 			<tr className="border-b border-blue-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-				<td colSpan={7} className="p-3 text-center text-slate-500 dark:text-slate-400">
+				<td colSpan={8} className="p-3 text-center text-slate-500 dark:text-slate-400">
 					<span className="loading loading-spinner loading-sm"></span>
 				</td>
 			</tr>
@@ -191,6 +204,11 @@ export const ProcessTableRow = ({
 			<td className="p-4 text-center">
 				<span className="badge badge-sm bg-slate-100 text-slate-900 dark:bg-slate-700 dark:text-slate-200 font-semibold">
 					{stepCount ? Number(stepCount) : 0} steps
+				</span>
+			</td>
+			<td className="p-4 text-center">
+				<span className="badge badge-sm bg-green-100 text-green-900 dark:bg-green-900 dark:text-green-200 font-semibold">
+					{instantiationCount ? Number(instantiationCount) : 0} uses
 				</span>
 			</td>
 			<td className="p-4 font-mono text-xs">
