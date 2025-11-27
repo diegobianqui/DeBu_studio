@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { RainbowKitProvider, darkTheme, lightTheme } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -10,7 +10,6 @@ import { Toaster } from "react-hot-toast";
 import { WagmiProvider } from "wagmi";
 import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
-import { ProcessNavBar } from "~~/components/debu/ProcessNavBar";
 import { Ethereum3DBackground } from "~~/components/Ethereum3DBackground";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
@@ -19,16 +18,15 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const isHomepage = pathname === "/";
 
+  // Memoize background to prevent recreation on navigation
+  // Only show background on homepage
+  const backgroundComponent = useMemo(() => isHomepage ? <Ethereum3DBackground /> : null, [isHomepage]);
+
   return (
     <>
-      <Ethereum3DBackground />
+      {backgroundComponent}
       <div className={`flex flex-col min-h-screen relative z-10`}>
         <Header />
-        {!isHomepage && (
-          <div className="flex justify-center mt-4 mb-2 z-10">
-            <ProcessNavBar />
-          </div>
-        )}
         <main className="relative flex flex-col flex-1">{children}</main>
         <Footer />
       </div>

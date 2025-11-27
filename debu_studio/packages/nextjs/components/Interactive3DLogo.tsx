@@ -10,14 +10,9 @@ const ModelMesh = ({ targetRotation, theme }: { targetRotation: React.MutableRef
   const meshRef = useRef<THREE.Group>(null);
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
 
-  // Dark mode: cyan, Light mode: dark blue/purple
-  const darkColor = "#27C8F5";
-  const lightColor = "#1E3A5F";
-  const color = theme === "light" ? lightColor : darkColor;
-
-  const darkEmissive = "#1BA8D5";
-  const lightEmissive = "#162D47";
-  const emissive = theme === "light" ? lightEmissive : darkEmissive;
+  // Use dark mode cyan color consistently
+  const color = "#27C8F5";
+  const emissive = "#1BA8D5";
 
   // Load GLB model
   useEffect(() => {
