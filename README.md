@@ -2,9 +2,12 @@
 
 **The Decentralized Bureaucracy Studio**
 
-"Institutions are made of the processes they define, adopt, and operate."
+It is important to raise awareness among the general audience that any processes affecting their existence—whether beneficial or harmful—are part of a pre-existing institutional design. In some cases, this institutional design can be rigged to deceive the population, groups, or individuals for the benefit of dominant minorities.
+
 DeBu Studio is a blockchain-based platform for designing, deploying, and executing standardized processes on-chain. It transforms traditional administrative workflows into transparent, immutable, and auditable smart contracts.
-This is a re-interpretation of the concept of Decentralized Bureaucracy that aims to support a **Decentralized Institutional Design**, offering a platform for the meritocratic selection of the most efficient processes, measured by adoption/usage rather than staking or other ownership and wealth-based mechanisms, as DAOs do (see this [Article](https://tr.tradingview.com/news/u_today:0cd602dbc094b:0-vitalik-buterin-names-four-reasons-why-ethereum-needs-better-daos/)).
+
+This is a re-interpretation of the concept of Decentralized Bureaucracy that aims to support a **Decentralized Institutional Design**, offering a platform for the meritocratic selection of the most efficient processes, measured by adoption/usage (consensus) rather than staking or other ownership and wealth-based mechanisms, as DAOs do (see this [Article](https://tr.tradingview.com/news/u_today:0cd602dbc094b:0-vitalik-buterin-names-four-reasons-why-ethereum-needs-better-daos/)).
+Keeping the design process transparently defined and immutable (ruled by a constellation of smart contracts), we are decentralizing not only operations but also the definition of the institutions.
 
 ## 🎯 Overview
 
